@@ -1,0 +1,170 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Sidebar } from './components/Sidebar';
+import { ChatMessage } from './components/ChatMessage';
+import { ChatInput } from './components/ChatInput';
+import { ModelDownload } from './components/ModelDownload';
+import { useChat } from './hooks/useChat';
+import { useTheme } from './hooks/useTheme';
+
+type AppState = 'checking' | 'download' | 'loading' | 'ready';
+
+export default function App(): React.ReactElement {
+  const [appState, setAppState] = useState<AppState>('checking');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const {
+    conversations,
+    currentConversation,
+    isGenerating,
+    queueLength,
+    llmStatus,
+    sendMessage,
+    stopGeneration,
+    createConversation,
+    selectConversation,
+    deleteConversation,
+    renameConversation,
+  } = useChat();
+
+  const { theme, isDark, cycleTheme } = useTheme();
+
+  // Check model status on mount
+  useEffect(() => {
+    const checkModel = async (): Promise<void> => {
+      const info = await window.electron.model.getInfo();
+
+      if (info.downloaded) {
+        setAppState('loading');
+        const result = await window.electron.llm.initialize();
+        if (result.success) {
+          setAppState('ready');
+        }
+      } else {
+        setAppState('download');
+      }
+    };
+
+    checkModel();
+  }, []);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentConversation?.messages]);
+
+  const handleDownloadComplete = useCallback(async (): Promise<void> => {
+    setAppState('loading');
+    const result = await window.electron.llm.initialize();
+    if (result.success) {
+      setAppState('ready');
+    }
+  }, []);
+
+  const getStatusDotClass = (): string => {
+    if (appState !== 'ready') return 'loading';
+    if (isGenerating) return 'loading';
+    return '';
+  };
+
+  const getStatusText = (): string => {
+    if (appState === 'loading') return llmStatus;
+    if (isGenerating && queueLength > 1) return `Generating... (${queueLength - 1} in queue)`;
+    if (isGenerating) return 'Generating...';
+    if (queueLength > 0) return `${queueLength} in queue`;
+    return 'Ready';
+  };
+
+  // Show download screen if model not available
+  if (appState === 'checking') {
+    return (
+      <div className="app">
+        <div className="main-content">
+          <div className="empty-state">
+            <h2>Loading...</h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (appState === 'download') {
+    return (
+      <div className="app">
+        <div className="main-content">
+          <ModelDownload onDownloadComplete={handleDownloadComplete} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      <Sidebar
+        conversations={conversations}
+        currentConversationId={currentConversation?.id ?? null}
+        theme={theme}
+        onNewChat={createConversation}
+        onSelectConversation={selectConversation}
+        onDeleteConversation={deleteConversation}
+        onRenameConversation={renameConversation}
+        onCycleTheme={cycleTheme}
+      />
+
+      <main className="main-content">
+        <header className="chat-header">
+          <h2>{currentConversation?.title ?? 'New Chat'}</h2>
+          <div className="status-indicator">
+            <span className={`status-dot ${getStatusDotClass()}`} />
+            {getStatusText()}
+          </div>
+        </header>
+
+        <div className="messages-container">
+          {currentConversation?.messages.map((message, index) => {
+            // Calculate queue position for queued messages
+            let queuePosition: number | undefined;
+            if (message.status === 'queued') {
+              const queuedMessages = currentConversation.messages.filter(
+                (m) => m.status === 'queued'
+              );
+              queuePosition = queuedMessages.findIndex((m) => m.id === message.id) + 1;
+            }
+
+            return (
+              <ChatMessage
+                key={message.id}
+                message={message}
+                isDark={isDark}
+                queuePosition={queuePosition}
+                isStreaming={
+                  isGenerating &&
+                  index === currentConversation.messages.length - 1 &&
+                  message.role === 'assistant'
+                }
+              />
+            );
+          })}
+
+          {!currentConversation?.messages.length && (
+            <div className="empty-state">
+              <h2>Start a conversation</h2>
+              <p>
+                Send a message to begin chatting with LiquidAI LFM2.
+                The model runs entirely on your Mac.
+              </p>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        <ChatInput
+          onSend={sendMessage}
+          onStop={stopGeneration}
+          isGenerating={isGenerating}
+          disabled={appState !== 'ready'}
+        />
+      </main>
+    </div>
+  );
+}
