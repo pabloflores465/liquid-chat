@@ -642,30 +642,77 @@ input, textarea {
   max-width: 400px;
 }
 
-/* Download screen */
-.download-screen {
+/* API Key Setup */
+.api-key-setup {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px;
+}
+
+.api-key-content {
+  width: 100%;
+  max-width: 400px;
   text-align: center;
 }
 
-.download-screen h2 {
-  font-size: 24px;
+.api-key-content h1 {
+  font-size: 28px;
   font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.api-key-content p {
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
-.download-screen p {
-  color: var(--text-secondary);
+.api-key-hint {
+  font-size: 13px;
   margin-bottom: 24px;
-  max-width: 400px;
 }
 
-.download-btn {
+.api-key-hint a {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.api-key-hint a:hover {
+  text-decoration: underline;
+}
+
+.api-key-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  transition: border-color var(--transition-fast);
+}
+
+.api-key-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.api-key-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.api-key-error {
+  color: var(--accent-danger);
+  font-size: 13px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.api-key-submit {
+  width: 100%;
   padding: 14px 28px;
   background: var(--accent-primary);
   color: var(--text-inverse);
@@ -675,26 +722,13 @@ input, textarea {
   transition: background var(--transition-fast);
 }
 
-.download-btn:hover:not(:disabled) {
+.api-key-submit:hover:not(:disabled) {
   background: var(--accent-hover);
 }
 
-.download-btn:disabled {
+.api-key-submit:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-}
-
-.progress-container {
-  width: 100%;
-  max-width: 400px;
-  margin-top: 24px;
-}
-
-.progress-bar {
-  height: 8px;
-  background: var(--bg-tertiary);
-  border-radius: 4px;
-  overflow: hidden;
 }
 
 .progress-fill {

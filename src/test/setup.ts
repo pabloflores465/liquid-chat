@@ -3,20 +3,11 @@ import { vi } from 'vitest';
 
 // Mock window.electron API
 const mockElectronAPI = {
-  model: {
-    getInfo: vi.fn().mockResolvedValue({
-      name: 'Test Model',
-      path: '/test/model.gguf',
-      size: 1000000,
-      downloaded: true,
-    }),
-    download: vi.fn().mockResolvedValue({ success: true, path: '/test/model.gguf' }),
-    cancelDownload: vi.fn().mockResolvedValue({ success: true }),
-    onDownloadProgress: vi.fn().mockReturnValue(() => {}),
-  },
   llm: {
     initialize: vi.fn().mockResolvedValue({ success: true }),
     isReady: vi.fn().mockResolvedValue(true),
+    setApiKey: vi.fn().mockResolvedValue({ success: true }),
+    getApiKey: vi.fn().mockResolvedValue('test-api-key'),
     resetSession: vi.fn().mockResolvedValue({ success: true }),
     loadHistory: vi.fn().mockResolvedValue({ success: true }),
     generate: vi.fn().mockResolvedValue({ success: true, response: 'Test response' }),
@@ -43,8 +34,8 @@ const mockElectronAPI = {
     setCurrentId: vi.fn().mockResolvedValue({ success: true }),
   },
   settings: {
-    get: vi.fn().mockResolvedValue({ theme: 'system', modelPath: null }),
-    update: vi.fn().mockResolvedValue({ theme: 'dark', modelPath: null }),
+    get: vi.fn().mockResolvedValue({ theme: 'system', apiKey: 'test-api-key' }),
+    update: vi.fn().mockResolvedValue({ theme: 'dark', apiKey: 'test-api-key' }),
   },
   theme: {
     getSystem: vi.fn().mockResolvedValue(false),
