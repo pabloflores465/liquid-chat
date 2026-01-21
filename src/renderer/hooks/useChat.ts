@@ -11,6 +11,7 @@ interface UseChatReturn {
   conversations: Conversation[];
   currentConversation: Conversation | null;
   isGenerating: boolean;
+  generatingConversationId: string | null;
   queueLength: number;
   llmStatus: string;
   sendMessage: (content: string) => Promise<void>;
@@ -33,6 +34,7 @@ export function useChat(): UseChatReturn {
   const currentConversationRef = useRef<Conversation | null>(null);
   const [backgroundGeneratingConvId, setBackgroundGeneratingConvId] = useState<string | null>(null);
   const [pendingSessionReset, setPendingSessionReset] = useState<string | null>(null);
+  const [generatingConversationId, setGeneratingConversationId] = useState<string | null>(null);
   const streamingContentByConvRef = useRef<Map<string, string>>(new Map());
 
   // Keep ref in sync with state
@@ -183,6 +185,7 @@ export function useChat(): UseChatReturn {
     // Update status to generating
     updateMessageStatus(item.conversationId, assistantMsg.id, 'generating');
     setIsGenerating(true);
+    setGeneratingConversationId(item.conversationId);
 
     // Initialize streaming content for this conversation
     streamingContentByConvRef.current.set(item.conversationId, '');
@@ -221,6 +224,7 @@ export function useChat(): UseChatReturn {
       streamingContentByConvRef.current.delete(item.conversationId);
     } finally {
       setIsGenerating(false);
+      setGeneratingConversationId(null);
       setBackgroundGeneratingConvId(null);
       setQueue((prev) => prev.slice(1));
       isProcessingRef.current = false;
@@ -408,6 +412,7 @@ export function useChat(): UseChatReturn {
     conversations,
     currentConversation,
     isGenerating,
+    generatingConversationId,
     queueLength: queue.length,
     llmStatus,
     sendMessage,

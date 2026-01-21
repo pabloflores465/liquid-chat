@@ -4,12 +4,23 @@ import { Conversation } from '../types/electron';
 interface SidebarProps {
   conversations: Conversation[];
   currentConversationId: string | null;
+  generatingConversationId: string | null;
   theme: 'light' | 'dark' | 'system';
   onNewChat: () => void;
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
   onCycleTheme: () => void;
+}
+
+function Spinner(): React.ReactElement {
+  return (
+    <div className="sidebar-spinner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+    </div>
+  );
 }
 
 const themeLabels = {
@@ -27,6 +38,7 @@ const themeIcons = {
 export function Sidebar({
   conversations,
   currentConversationId,
+  generatingConversationId,
   theme,
   onNewChat,
   onSelectConversation,
@@ -83,34 +95,37 @@ export function Sidebar({
       </div>
 
       <div className="conversations-list">
-        {conversations.map((conversation) => (
-          <div
-            key={conversation.id}
-            className={`conversation-item ${
-              conversation.id === currentConversationId ? 'active' : ''
-            }`}
-            onClick={() => editingId !== conversation.id && onSelectConversation(conversation.id)}
-          >
-            {editingId === conversation.id ? (
-              <input
-                ref={inputRef}
-                type="text"
-                className="conversation-title-input"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={() => handleRenameSubmit(conversation.id)}
-                onKeyDown={(e) => handleKeyDown(e, conversation.id)}
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span
-                className="conversation-title"
-                onDoubleClick={(e) => handleEdit(e, conversation)}
-              >
-                {conversation.title}
-              </span>
-            )}
-            <div className="conversation-actions">
+        {conversations.map((conversation) => {
+          const isGenerating = conversation.id === generatingConversationId;
+          return (
+            <div
+              key={conversation.id}
+              className={`conversation-item ${
+                conversation.id === currentConversationId ? 'active' : ''
+              } ${isGenerating ? 'generating' : ''}`}
+              onClick={() => editingId !== conversation.id && onSelectConversation(conversation.id)}
+            >
+              {isGenerating && <Spinner />}
+              {editingId === conversation.id ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  className="conversation-title-input"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => handleRenameSubmit(conversation.id)}
+                  onKeyDown={(e) => handleKeyDown(e, conversation.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span
+                  className="conversation-title"
+                  onDoubleClick={(e) => handleEdit(e, conversation)}
+                >
+                  {conversation.title}
+                </span>
+              )}
+              <div className="conversation-actions">
               <button
                 className="conversation-edit"
                 onClick={(e) => handleEdit(e, conversation)}
@@ -134,7 +149,8 @@ export function Sidebar({
               </button>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
 
       <div className="sidebar-footer">

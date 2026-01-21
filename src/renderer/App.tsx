@@ -16,6 +16,7 @@ export default function App(): React.ReactElement {
     conversations,
     currentConversation,
     isGenerating,
+    generatingConversationId,
     queueLength,
     llmStatus,
     sendMessage,
@@ -102,6 +103,7 @@ export default function App(): React.ReactElement {
       <Sidebar
         conversations={conversations}
         currentConversationId={currentConversation?.id ?? null}
+        generatingConversationId={generatingConversationId}
         theme={theme}
         onNewChat={createConversation}
         onSelectConversation={selectConversation}

@@ -198,6 +198,24 @@ input, textarea {
   background: var(--bg-tertiary);
 }
 
+.conversation-item.generating {
+  background: var(--bg-hover);
+}
+
+/* Sidebar spinner */
+.sidebar-spinner {
+  flex-shrink: 0;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-spinner svg {
+  color: var(--accent-primary);
+  animation: spin 1s linear infinite;
+}
+
 .conversation-title {
   flex: 1;
   overflow: hidden;
