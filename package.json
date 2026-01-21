@@ -22,7 +22,10 @@
   },
   "dependencies": {
     "electron-store": "^8.2.0",
+    "katex": "^0.16.27",
     "node-llama-cpp": "^3.5.1",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
@@ -31,6 +34,7 @@
     "@testing-library/jest-dom": "^6.2.0",
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/katex": "^0.16.8",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
