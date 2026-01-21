@@ -31,6 +31,9 @@ export function useChat(): UseChatReturn {
   const streamingContentRef = useRef('');
   const isProcessingRef = useRef(false);
   const currentConversationRef = useRef<Conversation | null>(null);
+  const [backgroundGeneratingConvId, setBackgroundGeneratingConvId] = useState<string | null>(null);
+  const [pendingSessionReset, setPendingSessionReset] = useState<string | null>(null);
+  const streamingContentByConvRef = useRef<Map<string, string>>(new Map());
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -66,24 +69,47 @@ export function useChat(): UseChatReturn {
 
   // Listen for streaming chunks
   useEffect(() => {
-    const unsubscribe = window.electron.llm.onChunk((chunk) => {
-      streamingContentRef.current += chunk;
+    const unsubscribe = window.electron.llm.onChunk((data) => {
+      const { chunk, conversationId } = data;
 
-      setCurrentConversation((prev) => {
-        if (!prev) return prev;
+      // Determine which conversation this chunk belongs to
+      const targetConvId = conversationId || currentConversationRef.current?.id;
+      if (!targetConvId) return;
 
-        const messages = [...prev.messages];
+      // Update streaming content for this conversation
+      const currentContent = streamingContentByConvRef.current.get(targetConvId) || '';
+      const newContent = currentContent + chunk;
+      streamingContentByConvRef.current.set(targetConvId, newContent);
+
+      // Also update the legacy ref for compatibility
+      if (targetConvId === currentConversationRef.current?.id) {
+        streamingContentRef.current = newContent;
+      }
+
+      // Update the appropriate conversation
+      const updateConversationMessages = (conv: Conversation): Conversation => {
+        if (conv.id !== targetConvId) return conv;
+
+        const messages = [...conv.messages];
         const lastMessage = messages[messages.length - 1];
 
         if (lastMessage && lastMessage.role === 'assistant' && lastMessage.status === 'generating') {
           messages[messages.length - 1] = {
             ...lastMessage,
-            content: streamingContentRef.current,
+            content: newContent,
           };
         }
 
-        return { ...prev, messages };
-      });
+        return { ...conv, messages };
+      };
+
+      // Update both state arrays
+      setConversations((prev) => prev.map(updateConversationMessages));
+
+      // Only update currentConversation if it's the target
+      if (targetConvId === currentConversationRef.current?.id) {
+        setCurrentConversation((prev) => (prev ? updateConversationMessages(prev) : prev));
+      }
     });
 
     return unsubscribe;
@@ -123,10 +149,17 @@ export function useChat(): UseChatReturn {
     isProcessingRef.current = true;
     const item = queue[0];
 
-    // Find the conversation and assistant message to update
-    const conversation = currentConversationRef.current;
-    if (!conversation || conversation.id !== item.conversationId) {
-      // Skip if conversation changed
+    // Find the conversation from state (not just current ref - supports background generation)
+    const conversationsSnapshot = await new Promise<Conversation[]>((resolve) => {
+      setConversations((prev) => {
+        resolve(prev);
+        return prev;
+      });
+    });
+
+    const conversation = conversationsSnapshot.find((c) => c.id === item.conversationId);
+    if (!conversation) {
+      // Skip if conversation doesn't exist
       setQueue((prev) => prev.slice(1));
       isProcessingRef.current = false;
       return;
@@ -144,31 +177,51 @@ export function useChat(): UseChatReturn {
       return;
     }
 
+    // Tell the main process which conversation we're generating for
+    await window.electron.llm.setGeneratingConversation(item.conversationId);
+
     // Update status to generating
     updateMessageStatus(item.conversationId, assistantMsg.id, 'generating');
     setIsGenerating(true);
+
+    // Initialize streaming content for this conversation
+    streamingContentByConvRef.current.set(item.conversationId, '');
     streamingContentRef.current = '';
 
     try {
       const result = await window.electron.llm.generate(item.content);
+
+      // Get the final streaming content for this conversation
+      const finalContent = streamingContentByConvRef.current.get(item.conversationId) || '';
 
       const finalStatus: MessageStatus = result.success || result.aborted ? 'complete' : 'error';
       updateMessageStatus(
         item.conversationId,
         assistantMsg.id,
         finalStatus,
-        streamingContentRef.current
+        finalContent
       );
 
-      // Save conversation
-      const updatedConv = currentConversationRef.current;
+      // Get the updated conversation from state and save it
+      const updatedConversations = await new Promise<Conversation[]>((resolve) => {
+        setConversations((prev) => {
+          resolve(prev);
+          return prev;
+        });
+      });
+      const updatedConv = updatedConversations.find((c) => c.id === item.conversationId);
       if (updatedConv) {
         await window.electron.conversations.save(updatedConv);
       }
+
+      // Clean up streaming content for this conversation
+      streamingContentByConvRef.current.delete(item.conversationId);
     } catch (error) {
       updateMessageStatus(item.conversationId, assistantMsg.id, 'error', 'Error generating response');
+      streamingContentByConvRef.current.delete(item.conversationId);
     } finally {
       setIsGenerating(false);
+      setBackgroundGeneratingConvId(null);
       setQueue((prev) => prev.slice(1));
       isProcessingRef.current = false;
     }
@@ -180,6 +233,30 @@ export function useChat(): UseChatReturn {
       processQueue();
     }
   }, [queue, processQueue]);
+
+  // Handle pending session reset after background generation completes
+  useEffect(() => {
+    if (!isGenerating && pendingSessionReset && !backgroundGeneratingConvId) {
+      const performPendingReset = async (): Promise<void> => {
+        await window.electron.llm.resetSession();
+
+        // Find the conversation to load history for
+        const conv = conversations.find((c) => c.id === pendingSessionReset);
+        if (conv && conv.messages.length > 0) {
+          const completeMessages = conv.messages.filter(
+            (m) => m.status === 'complete' || m.status === undefined
+          );
+          if (completeMessages.length > 0) {
+            await window.electron.llm.loadHistory(completeMessages);
+          }
+        }
+
+        setPendingSessionReset(null);
+      };
+
+      performPendingReset();
+    }
+  }, [isGenerating, pendingSessionReset, backgroundGeneratingConvId, conversations]);
 
   const sendMessage = useCallback(async (content: string): Promise<void> => {
     if (!content.trim()) return;
@@ -253,37 +330,29 @@ export function useChat(): UseChatReturn {
   const selectConversation = useCallback(async (id: string): Promise<void> => {
     const conversation = conversations.find((c) => c.id === id);
     if (conversation) {
-      // If switching to a different conversation, stop generation and clear queue
       const previousConvId = currentConversationRef.current?.id;
-      if (previousConvId && previousConvId !== id) {
-        // Stop any ongoing generation
-        if (isProcessingRef.current) {
-          window.electron.llm.stop();
-        }
-        // Clear queue items for the previous conversation
-        setQueue((prev) => prev.filter((item) => item.conversationId !== previousConvId));
 
-        // Mark any queued/generating messages in the old conversation as complete
-        setConversations((prevConvs) =>
-          prevConvs.map((c) => {
-            if (c.id !== previousConvId) return c;
-            return {
-              ...c,
-              messages: c.messages.map((m) =>
-                m.status === 'queued' || m.status === 'generating'
-                  ? { ...m, status: 'complete' as const }
-                  : m
-              ),
-            };
-          })
-        );
+      // If switching to a different conversation while generating, let it continue in background
+      if (previousConvId && previousConvId !== id && isProcessingRef.current) {
+        // Set the background generating conversation
+        setBackgroundGeneratingConvId(previousConvId);
+        // Queue the session reset for when generation completes
+        setPendingSessionReset(id);
+
+        // Update UI to show the new conversation
+        setCurrentConversation(conversation);
+        currentConversationRef.current = conversation;
+        await window.electron.conversations.setCurrentId(id);
+
+        // Don't reset session or load history yet - wait for background generation to complete
+        return;
       }
 
       setCurrentConversation(conversation);
       currentConversationRef.current = conversation;
       await window.electron.conversations.setCurrentId(id);
 
-      // Reset and load history
+      // Reset and load history (only if not waiting for background generation)
       await window.electron.llm.resetSession();
       if (conversation.messages.length > 0) {
         // Filter out incomplete messages when loading history

@@ -33,6 +33,11 @@ interface AppSettings {
   modelPath: string | null;
 }
 
+interface ChunkData {
+  chunk: string;
+  conversationId: string | null;
+}
+
 type Callback<T> = (data: T) => void;
 
 const electronAPI = {
@@ -62,9 +67,15 @@ const electronAPI = {
     generate: (prompt: string): Promise<{ success: boolean; response?: string; error?: string; aborted?: boolean }> =>
       ipcRenderer.invoke('llm:generate', prompt),
     stop: (): Promise<{ success: boolean }> => ipcRenderer.invoke('llm:stop'),
-    onChunk: (callback: Callback<string>): (() => void) => {
-      const handler = (_event: IpcRendererEvent, chunk: string): void => {
-        callback(chunk);
+    setGeneratingConversation: (id: string | null): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('llm:set-generating-conversation', id),
+    getGeneratingConversation: (): Promise<string | null> =>
+      ipcRenderer.invoke('llm:get-generating-conversation'),
+    isGenerating: (): Promise<boolean> =>
+      ipcRenderer.invoke('llm:is-generating'),
+    onChunk: (callback: Callback<ChunkData>): (() => void) => {
+      const handler = (_event: IpcRendererEvent, data: ChunkData): void => {
+        callback(data);
       };
       ipcRenderer.on('llm:chunk', handler);
       return () => ipcRenderer.removeListener('llm:chunk', handler);

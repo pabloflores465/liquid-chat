@@ -34,6 +34,11 @@ export interface AppSettings {
   modelPath: string | null;
 }
 
+export interface ChunkData {
+  chunk: string;
+  conversationId: string | null;
+}
+
 type Callback<T> = (data: T) => void;
 
 export interface ElectronAPI {
@@ -50,7 +55,10 @@ export interface ElectronAPI {
     loadHistory: (messages: Message[]) => Promise<{ success: boolean; error?: string }>;
     generate: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string; aborted?: boolean }>;
     stop: () => Promise<{ success: boolean }>;
-    onChunk: (callback: Callback<string>) => () => void;
+    setGeneratingConversation: (id: string | null) => Promise<{ success: boolean }>;
+    getGeneratingConversation: () => Promise<string | null>;
+    isGenerating: () => Promise<boolean>;
+    onChunk: (callback: Callback<ChunkData>) => () => void;
     onStatus: (callback: Callback<string>) => () => void;
   };
   conversations: {

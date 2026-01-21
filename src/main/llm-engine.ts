@@ -12,6 +12,7 @@ export class LLMEngine {
   private isGenerating = false;
   private shouldStop = false;
   private generationPromise: Promise<string> | null = null;
+  private generatingForConversationId: string | null = null;
 
   setMainWindow(window: BrowserWindow): void {
     this.mainWindow = window;
@@ -156,6 +157,7 @@ export class LLMEngine {
         this.isGenerating = false;
         this.shouldStop = false;
         this.generationPromise = null;
+        this.generatingForConversationId = null;
       }
     };
 
@@ -173,6 +175,14 @@ export class LLMEngine {
 
   isCurrentlyGenerating(): boolean {
     return this.isGenerating;
+  }
+
+  setGeneratingConversationId(id: string | null): void {
+    this.generatingForConversationId = id;
+  }
+
+  getGeneratingConversationId(): string | null {
+    return this.generatingForConversationId;
   }
 
   private sendStatus(status: string): void {

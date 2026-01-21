@@ -115,7 +115,10 @@ ipcMain.handle('llm:generate', async (event, prompt: string) => {
   try {
     const response = await llmEngine.generate(prompt, (chunk) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('llm:chunk', chunk);
+        mainWindow.webContents.send('llm:chunk', {
+          chunk,
+          conversationId: llmEngine.getGeneratingConversationId(),
+        });
       }
     });
     return { success: true, response };
@@ -131,6 +134,19 @@ ipcMain.handle('llm:generate', async (event, prompt: string) => {
 ipcMain.handle('llm:stop', () => {
   llmEngine.stopGeneration();
   return { success: true };
+});
+
+ipcMain.handle('llm:set-generating-conversation', (_event, id: string | null) => {
+  llmEngine.setGeneratingConversationId(id);
+  return { success: true };
+});
+
+ipcMain.handle('llm:get-generating-conversation', () => {
+  return llmEngine.getGeneratingConversationId();
+});
+
+ipcMain.handle('llm:is-generating', () => {
+  return llmEngine.isCurrentlyGenerating();
 });
 
 // Conversation management
