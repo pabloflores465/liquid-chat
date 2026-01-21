@@ -1,7 +1,7 @@
 {
   "name": "liquid-chat",
   "version": "1.0.0",
-  "description": "AI Chatbot powered by Qwen3 via OpenRouter",
+  "description": "Local AI Chatbot powered by Qwen3",
   "main": "dist/main/main.js",
   "type": "module",
   "scripts": {
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "electron-store": "^8.2.0",
+    "node-llama-cpp": "^3.5.1",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
@@ -59,6 +60,10 @@
     "appId": "com.liquidchat.app",
     "productName": "Liquid Chat",
     "asar": true,
+    "asarUnpack": [
+      "**/*.node",
+      "**/node_modules/node-llama-cpp/**/*"
+    ],
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -66,6 +71,15 @@
     "files": [
       "dist/**/*",
       "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "models/",
+        "to": "models/",
+        "filter": [
+          "**/*.gguf"
+        ]
+      }
     ],
     "mac": {
       "category": "public.app-category.productivity",

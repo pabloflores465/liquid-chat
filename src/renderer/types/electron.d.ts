@@ -16,9 +16,22 @@ export interface Conversation {
   updatedAt: number;
 }
 
+export interface ModelInfo {
+  name: string;
+  path: string;
+  size: number;
+  downloaded: boolean;
+}
+
+export interface DownloadProgress {
+  percent: number;
+  downloadedBytes: number;
+  totalBytes: number;
+}
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
-  apiKey: string | null;
+  modelPath: string | null;
 }
 
 export interface ChunkData {
@@ -29,11 +42,15 @@ export interface ChunkData {
 type Callback<T> = (data: T) => void;
 
 export interface ElectronAPI {
+  model: {
+    getInfo: () => Promise<ModelInfo>;
+    download: () => Promise<{ success: boolean; path?: string; error?: string }>;
+    cancelDownload: () => Promise<{ success: boolean }>;
+    onDownloadProgress: (callback: Callback<DownloadProgress>) => () => void;
+  };
   llm: {
     initialize: () => Promise<{ success: boolean; error?: string }>;
     isReady: () => Promise<boolean>;
-    setApiKey: (apiKey: string) => Promise<{ success: boolean }>;
-    getApiKey: () => Promise<string | null>;
     resetSession: () => Promise<{ success: boolean }>;
     loadHistory: (messages: Message[]) => Promise<{ success: boolean; error?: string }>;
     generate: (prompt: string) => Promise<{ success: boolean; response?: string; error?: string; aborted?: boolean }>;

@@ -1,59 +1,119 @@
+import { getLlama, LlamaChatSession, Llama, LlamaModel, LlamaContext, LlamaContextSequence } from 'node-llama-cpp';
 import { BrowserWindow } from 'electron';
 import { Message } from './types.js';
 
-const MODEL_ID = 'qwen/qwen3-4b-2507';
-const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
-interface OpenRouterMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
 export class LLMEngine {
+  private llama: Llama | null = null;
+  private model: LlamaModel | null = null;
+  private context: LlamaContext | null = null;
+  private sequence: LlamaContextSequence | null = null;
+  private session: LlamaChatSession | null = null;
   private mainWindow: BrowserWindow | null = null;
   private isGenerating = false;
   private shouldStop = false;
-  private abortController: AbortController | null = null;
+  private generationPromise: Promise<string> | null = null;
   private generatingForConversationId: string | null = null;
-  private conversationHistory: OpenRouterMessage[] = [];
-  private apiKey: string | null = null;
 
   setMainWindow(window: BrowserWindow): void {
     this.mainWindow = window;
   }
 
-  setApiKey(key: string): void {
-    this.apiKey = key;
-  }
+  async initialize(modelPath: string): Promise<void> {
+    if (this.model) {
+      return;
+    }
 
-  getApiKey(): string | null {
-    return this.apiKey;
-  }
+    this.sendStatus('Initializing LLM engine...');
 
-  async initialize(): Promise<void> {
+    this.llama = await getLlama();
+
+    this.sendStatus('Loading model...');
+
+    this.model = await this.llama.loadModel({
+      modelPath,
+    });
+
+    this.sendStatus('Creating context...');
+
+    this.context = await this.model.createContext({
+      contextSize: 4096,
+    });
+
+    // Create a single sequence that we'll reuse
+    this.sequence = this.context.getSequence();
+
+    // Create initial session
+    this.session = new LlamaChatSession({
+      contextSequence: this.sequence,
+    });
+
     this.sendStatus('Ready');
   }
 
   async resetSession(): Promise<void> {
+    if (!this.context || !this.sequence) {
+      throw new Error('LLM not initialized');
+    }
+
+    // Stop any ongoing generation and wait for it to finish
     if (this.isGenerating) {
       this.stopGeneration();
+      if (this.generationPromise) {
+        try {
+          await this.generationPromise;
+        } catch {
+          // Ignore errors from aborted generation
+        }
+      }
     }
-    this.conversationHistory = [];
+
+    // Dispose old session if exists
+    if (this.session) {
+      this.session = null;
+    }
+
+    // Erase the sequence state to start fresh
+    this.sequence.eraseContextTokenRanges([
+      { start: 0, end: this.sequence.nextTokenIndex }
+    ]);
+
+    // Create a new session with the same sequence
+    this.session = new LlamaChatSession({
+      contextSequence: this.sequence,
+    });
   }
 
   async loadConversationHistory(messages: Message[]): Promise<void> {
-    this.conversationHistory = messages.map((msg) => ({
-      role: msg.role,
-      content: msg.content,
-    }));
+    if (!this.session) {
+      throw new Error('Session not created');
+    }
+
+    // Build chat history in the format node-llama-cpp expects
+    const chatHistory: Array<{ type: 'user'; text: string } | { type: 'model'; response: string[] }> = [];
+
+    for (const msg of messages) {
+      if (msg.role === 'user') {
+        chatHistory.push({
+          type: 'user',
+          text: msg.content,
+        });
+      } else if (msg.role === 'assistant') {
+        chatHistory.push({
+          type: 'model',
+          response: [msg.content],
+        });
+      }
+    }
+
+    this.session.setChatHistory(chatHistory);
   }
 
   async generate(
     prompt: string,
     onChunk: (chunk: string) => void
   ): Promise<string> {
-    if (!this.apiKey) {
-      throw new Error('API key not configured');
+    if (!this.context || !this.session) {
+      throw new Error('LLM not initialized');
     }
 
     if (this.isGenerating) {
@@ -62,105 +122,55 @@ export class LLMEngine {
 
     this.isGenerating = true;
     this.shouldStop = false;
-    this.abortController = new AbortController();
 
     let fullResponse = '';
 
-    try {
-      const messages: OpenRouterMessage[] = [
-        ...this.conversationHistory,
-        { role: 'user', content: prompt },
-      ];
-
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-          'HTTP-Referer': 'https://liquid-chat.app',
-          'X-Title': 'Liquid Chat',
-        },
-        body: JSON.stringify({
-          model: MODEL_ID,
-          messages,
-          stream: true,
-          max_tokens: 2048,
+    const doGenerate = async (): Promise<string> => {
+      try {
+        fullResponse = await this.session!.prompt(prompt, {
+          maxTokens: 2048,
           temperature: 0.7,
-          top_p: 0.9,
-        }),
-        signal: this.abortController.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error: ${response.status} - ${errorText}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No response body');
-      }
-
-      const decoder = new TextDecoder();
-
-      while (true) {
-        if (this.shouldStop) {
-          reader.cancel();
-          break;
-        }
-
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) {
-                fullResponse += content;
-                onChunk(content);
-              }
-            } catch {
-              // Skip invalid JSON lines
+          topP: 0.9,
+          repeatPenalty: {
+            penalty: 1.2,
+            frequencyPenalty: 0.1,
+            presencePenalty: 0.1,
+            penalizeNewLine: false,
+            lastTokens: 64,
+          },
+          onTextChunk: (chunk) => {
+            if (this.shouldStop) {
+              throw new Error('Aborted');
             }
-          }
-        }
-      }
+            fullResponse += chunk;
+            onChunk(chunk);
+          },
+        });
 
-      // Add to conversation history
-      this.conversationHistory.push({ role: 'user', content: prompt });
-      this.conversationHistory.push({ role: 'assistant', content: fullResponse });
-
-      return fullResponse;
-    } catch (error: unknown) {
-      if (error instanceof Error && error.name === 'AbortError') {
         return fullResponse;
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === 'Aborted') {
+          return fullResponse;
+        }
+        throw error;
+      } finally {
+        this.isGenerating = false;
+        this.shouldStop = false;
+        this.generationPromise = null;
+        this.generatingForConversationId = null;
       }
-      throw error;
-    } finally {
-      this.isGenerating = false;
-      this.shouldStop = false;
-      this.abortController = null;
-      this.generatingForConversationId = null;
-    }
+    };
+
+    this.generationPromise = doGenerate();
+    return this.generationPromise;
   }
 
   stopGeneration(): void {
     this.shouldStop = true;
-    if (this.abortController) {
-      this.abortController.abort();
-    }
   }
 
   isReady(): boolean {
-    return this.apiKey !== null;
+    return this.model !== null && this.context !== null && this.session !== null;
   }
 
   isCurrentlyGenerating(): boolean {
@@ -183,7 +193,20 @@ export class LLMEngine {
 
   async dispose(): Promise<void> {
     this.stopGeneration();
-    this.conversationHistory = [];
+    this.session = null;
+    this.sequence = null;
+
+    if (this.context) {
+      await this.context.dispose();
+      this.context = null;
+    }
+
+    if (this.model) {
+      await this.model.dispose();
+      this.model = null;
+    }
+
+    this.llama = null;
   }
 }
 

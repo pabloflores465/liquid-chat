@@ -13,9 +13,22 @@ export interface Conversation {
   updatedAt: number;
 }
 
+export interface ModelInfo {
+  name: string;
+  path: string;
+  size: number;
+  downloaded: boolean;
+}
+
+export interface DownloadProgress {
+  percent: number;
+  downloadedBytes: number;
+  totalBytes: number;
+}
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
-  apiKey: string | null;
+  modelPath: string | null;
 }
 
 export interface StoreSchema {

@@ -9,7 +9,7 @@ interface StoreData {
 
 const defaultSettings: AppSettings = {
   theme: 'system',
-  apiKey: null,
+  modelPath: null,
 };
 
 export const store = new Store<StoreData>({

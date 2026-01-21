@@ -17,7 +17,20 @@ interface Conversation {
 
 interface AppSettings {
   theme: 'light' | 'dark' | 'system';
-  apiKey: string | null;
+  modelPath: string | null;
+}
+
+interface ModelInfo {
+  name: string;
+  path: string;
+  size: number;
+  downloaded: boolean;
+}
+
+interface DownloadProgress {
+  percent: number;
+  downloadedBytes: number;
+  totalBytes: number;
 }
 
 interface ChunkData {
@@ -28,14 +41,25 @@ interface ChunkData {
 type Callback<T> = (data: T) => void;
 
 const electronAPI = {
+  model: {
+    getInfo: (): Promise<ModelInfo> => ipcRenderer.invoke('model:get-info'),
+    download: (): Promise<{ success: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke('model:download'),
+    cancelDownload: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('model:cancel-download'),
+    onDownloadProgress: (callback: Callback<DownloadProgress>): (() => void) => {
+      const handler = (_event: IpcRendererEvent, progress: DownloadProgress): void => {
+        callback(progress);
+      };
+      ipcRenderer.on('model:download-progress', handler);
+      return () => ipcRenderer.removeListener('model:download-progress', handler);
+    },
+  },
+
   llm: {
     initialize: (): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('llm:initialize'),
     isReady: (): Promise<boolean> => ipcRenderer.invoke('llm:is-ready'),
-    setApiKey: (apiKey: string): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke('llm:set-api-key', apiKey),
-    getApiKey: (): Promise<string | null> =>
-      ipcRenderer.invoke('llm:get-api-key'),
     resetSession: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('llm:reset-session'),
     loadHistory: (messages: Message[]): Promise<{ success: boolean; error?: string }> =>

@@ -2,66 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatMessage } from './components/ChatMessage';
 import { ChatInput } from './components/ChatInput';
+import { ModelDownload } from './components/ModelDownload';
 import { useChat } from './hooks/useChat';
 import { useTheme } from './hooks/useTheme';
 
-type AppState = 'checking' | 'api-key' | 'ready';
-
-function ApiKeySetup({ onComplete }: { onComplete: () => void }): React.ReactElement {
-  const [apiKey, setApiKey] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    if (!apiKey.trim()) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await window.electron.llm.setApiKey(apiKey.trim());
-      await window.electron.settings.update({ apiKey: apiKey.trim() });
-      await window.electron.llm.initialize();
-      onComplete();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set API key');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="api-key-setup">
-      <div className="api-key-content">
-        <h1>Welcome to Liquid Chat</h1>
-        <p>Enter your OpenRouter API key to get started.</p>
-        <p className="api-key-hint">
-          Get your API key at{' '}
-          <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">
-            openrouter.ai/keys
-          </a>
-        </p>
-
-        <form onSubmit={handleSubmit}>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="sk-or-..."
-            className="api-key-input"
-            disabled={isLoading}
-            autoFocus
-          />
-          {error && <div className="api-key-error">{error}</div>}
-          <button type="submit" className="api-key-submit" disabled={isLoading || !apiKey.trim()}>
-            {isLoading ? 'Setting up...' : 'Start Chatting'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
+type AppState = 'checking' | 'download' | 'loading' | 'ready';
 
 export default function App(): React.ReactElement {
   const [appState, setAppState] = useState<AppState>('checking');
@@ -84,21 +29,23 @@ export default function App(): React.ReactElement {
 
   const { theme, isDark, cycleTheme } = useTheme();
 
-  // Check API key on mount
+  // Check model status on mount
   useEffect(() => {
-    const checkApiKey = async (): Promise<void> => {
-      const settings = await window.electron.settings.get();
+    const checkModel = async (): Promise<void> => {
+      const info = await window.electron.model.getInfo();
 
-      if (settings.apiKey) {
-        await window.electron.llm.setApiKey(settings.apiKey);
-        await window.electron.llm.initialize();
-        setAppState('ready');
+      if (info.downloaded) {
+        setAppState('loading');
+        const result = await window.electron.llm.initialize();
+        if (result.success) {
+          setAppState('ready');
+        }
       } else {
-        setAppState('api-key');
+        setAppState('download');
       }
     };
 
-    checkApiKey();
+    checkModel();
   }, []);
 
   // Auto-scroll to bottom
@@ -106,8 +53,12 @@ export default function App(): React.ReactElement {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentConversation?.messages]);
 
-  const handleApiKeyComplete = useCallback((): void => {
-    setAppState('ready');
+  const handleDownloadComplete = useCallback(async (): Promise<void> => {
+    setAppState('loading');
+    const result = await window.electron.llm.initialize();
+    if (result.success) {
+      setAppState('ready');
+    }
   }, []);
 
   const getStatusDotClass = (): string => {
@@ -117,7 +68,7 @@ export default function App(): React.ReactElement {
   };
 
   const getStatusText = (): string => {
-    if (appState !== 'ready') return llmStatus;
+    if (appState === 'loading') return llmStatus;
     if (isGenerating && queueLength > 1) return `Generating... (${queueLength - 1} in queue)`;
     if (isGenerating) return 'Generating...';
     if (queueLength > 0) return `${queueLength} in queue`;
@@ -136,11 +87,11 @@ export default function App(): React.ReactElement {
     );
   }
 
-  if (appState === 'api-key') {
+  if (appState === 'download') {
     return (
       <div className="app">
         <div className="main-content">
-          <ApiKeySetup onComplete={handleApiKeyComplete} />
+          <ModelDownload onDownloadComplete={handleDownloadComplete} />
         </div>
       </div>
     );
@@ -199,6 +150,7 @@ export default function App(): React.ReactElement {
               <h2>Start a conversation</h2>
               <p>
                 Send a message to begin chatting with Qwen3.
+                The model runs entirely on your Mac.
               </p>
             </div>
           )}

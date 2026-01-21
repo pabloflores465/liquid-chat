@@ -642,77 +642,35 @@ input, textarea {
   max-width: 400px;
 }
 
-/* API Key Setup */
-.api-key-setup {
+/* Download screen */
+.download-screen {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px;
-}
-
-.api-key-content {
-  width: 100%;
-  max-width: 400px;
   text-align: center;
 }
 
-.api-key-content h1 {
-  font-size: 28px;
+.download-screen h2 {
+  font-size: 24px;
   font-weight: 600;
-  margin-bottom: 12px;
-}
-
-.api-key-content p {
-  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
-.api-key-hint {
-  font-size: 13px;
+.download-screen p {
+  color: var(--text-secondary);
   margin-bottom: 24px;
+  max-width: 400px;
 }
 
-.api-key-hint a {
-  color: var(--accent-primary);
-  text-decoration: none;
-}
-
-.api-key-hint a:hover {
-  text-decoration: underline;
-}
-
-.api-key-input {
-  width: 100%;
-  padding: 14px 16px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  font-size: 15px;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-  transition: border-color var(--transition-fast);
-}
-
-.api-key-input:focus {
-  outline: none;
-  border-color: var(--border-focus);
-}
-
-.api-key-input::placeholder {
-  color: var(--text-tertiary);
-}
-
-.api-key-error {
+.download-error {
   color: var(--accent-danger);
-  font-size: 13px;
-  margin-bottom: 12px;
-  text-align: left;
+  margin-bottom: 16px;
 }
 
-.api-key-submit {
-  width: 100%;
+.download-btn {
   padding: 14px 28px;
   background: var(--accent-primary);
   color: var(--text-inverse);
@@ -722,13 +680,48 @@ input, textarea {
   transition: background var(--transition-fast);
 }
 
-.api-key-submit:hover:not(:disabled) {
+.download-btn:hover:not(:disabled) {
   background: var(--accent-hover);
 }
 
-.api-key-submit:disabled {
+.download-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.download-btn.cancel {
+  background: var(--accent-danger);
+  margin-top: 16px;
+}
+
+.download-btn.cancel:hover {
+  background: var(--accent-danger-hover);
+}
+
+.progress-container {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 24px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.progress-text {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .progress-fill {

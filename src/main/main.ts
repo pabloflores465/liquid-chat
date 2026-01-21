@@ -3,6 +3,7 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { llmEngine } from './llm-engine.js';
+import { modelManager } from './model-manager.js';
 import {
   getConversations,
   getConversation,
@@ -37,6 +38,7 @@ function createWindow(): void {
   });
 
   llmEngine.setMainWindow(mainWindow);
+  modelManager.setMainWindow(mainWindow);
 
   const isDev = process.env.NODE_ENV === 'development';
   const isTest = process.env.NODE_ENV === 'test';
@@ -57,10 +59,31 @@ function createWindow(): void {
 
 // IPC Handlers
 
+// Model operations
+ipcMain.handle('model:get-info', () => {
+  return modelManager.getModelInfo();
+});
+
+ipcMain.handle('model:download', async () => {
+  try {
+    const path = await modelManager.downloadModel();
+    return { success: true, path };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: message };
+  }
+});
+
+ipcMain.handle('model:cancel-download', () => {
+  modelManager.cancelDownload();
+  return { success: true };
+});
+
 // LLM operations
 ipcMain.handle('llm:initialize', async () => {
   try {
-    await llmEngine.initialize();
+    const modelPath = modelManager.getModelPath();
+    await llmEngine.initialize(modelPath);
     return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -70,15 +93,6 @@ ipcMain.handle('llm:initialize', async () => {
 
 ipcMain.handle('llm:is-ready', () => {
   return llmEngine.isReady();
-});
-
-ipcMain.handle('llm:set-api-key', (_event, apiKey: string) => {
-  llmEngine.setApiKey(apiKey);
-  return { success: true };
-});
-
-ipcMain.handle('llm:get-api-key', () => {
-  return llmEngine.getApiKey();
 });
 
 ipcMain.handle('llm:reset-session', async () => {
@@ -109,7 +123,7 @@ ipcMain.handle('llm:generate', async (_event, prompt: string) => {
     return { success: true, response };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    if (message === 'Aborted' || (error instanceof Error && error.name === 'AbortError')) {
+    if (message === 'Aborted') {
       return { success: false, aborted: true };
     }
     return { success: false, error: message };
