@@ -736,6 +736,44 @@ input, textarea {
   to { transform: rotate(360deg); }
 }
 
+/* Loading dots animation */
+.loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: loading-dot-bounce 1.4s ease-in-out infinite both;
+}
+
+.loading-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0s;
+}
+
+@keyframes loading-dot-bounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* Queue indicator */
 .queue-indicator {
   display: flex;
@@ -760,19 +798,28 @@ input, textarea {
 .generating-state {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: var(--text-secondary);
-  font-size: 13px;
-  padding: 8px 0;
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+.generating-state .loading-dots {
+  margin-right: 4px;
 }
 
 .generating-indicator {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-color);
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.generating-indicator .loading-dots span {
+  width: 6px;
+  height: 6px;
 }
 
 /* Error state */

@@ -16,10 +16,12 @@ function formatTime(timestamp: number): string {
   });
 }
 
-function Spinner(): React.ReactElement {
+function LoadingDots(): React.ReactElement {
   return (
-    <div className="spinner">
-      <div className="spinner-circle"></div>
+    <div className="loading-dots">
+      <span></span>
+      <span></span>
+      <span></span>
     </div>
   );
 }
@@ -46,22 +48,22 @@ export function ChatMessage({ message, isDark, isStreaming, queuePosition }: Cha
       return <QueueIndicator position={queuePosition || 1} />;
     }
 
-    // Show generating state with spinner or content
+    // Show generating state with loading animation or content
     if (status === 'generating') {
       if (message.content) {
         return (
           <>
             <MessageContent content={message.content} isDark={isDark} />
             <div className="generating-indicator">
-              <Spinner />
+              <LoadingDots />
             </div>
           </>
         );
       }
       return (
         <div className="generating-state">
-          <Spinner />
-          <span>Generating...</span>
+          <LoadingDots />
+          <span>Thinking...</span>
         </div>
       );
     }

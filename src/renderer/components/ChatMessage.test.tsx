@@ -54,7 +54,7 @@ describe('ChatMessage', () => {
     expect(messageDiv).toBeInTheDocument();
   });
 
-  it('shows generating state with spinner', () => {
+  it('shows generating state with loading animation', () => {
     const generatingMessage: Message = {
       ...baseMessage,
       role: 'assistant',
@@ -66,9 +66,9 @@ describe('ChatMessage', () => {
       <ChatMessage message={generatingMessage} isDark={false} />
     );
 
-    const spinner = container.querySelector('.spinner');
-    expect(spinner).toBeInTheDocument();
-    expect(screen.getByText('Generating...')).toBeInTheDocument();
+    const loadingDots = container.querySelector('.loading-dots');
+    expect(loadingDots).toBeInTheDocument();
+    expect(screen.getByText('Thinking...')).toBeInTheDocument();
   });
 
   it('shows queue indicator for queued messages', () => {
@@ -84,7 +84,7 @@ describe('ChatMessage', () => {
     expect(screen.getByText('In queue (#2)')).toBeInTheDocument();
   });
 
-  it('shows spinner with content when generating with partial response', () => {
+  it('shows loading animation with content when generating with partial response', () => {
     const generatingWithContent: Message = {
       ...baseMessage,
       role: 'assistant',
@@ -97,7 +97,7 @@ describe('ChatMessage', () => {
     );
 
     expect(screen.getByText(/Partial response/)).toBeInTheDocument();
-    expect(container.querySelector('.generating-indicator .spinner')).toBeInTheDocument();
+    expect(container.querySelector('.generating-indicator .loading-dots')).toBeInTheDocument();
   });
 
   it('formats timestamp correctly', () => {
