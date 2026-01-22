@@ -5,10 +5,12 @@ interface SidebarProps {
   conversations: Conversation[];
   currentConversationId: string | null;
   generatingConversationId: string | null;
+  hasMoreConversations: boolean;
   onNewChat: () => void;
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
+  onLoadMore: () => void;
 }
 
 function Spinner(): React.ReactElement {
@@ -25,10 +27,12 @@ export function Sidebar({
   conversations,
   currentConversationId,
   generatingConversationId,
+  hasMoreConversations,
   onNewChat,
   onSelectConversation,
   onDeleteConversation,
   onRenameConversation,
+  onLoadMore,
 }: SidebarProps): React.ReactElement {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -135,6 +139,11 @@ export function Sidebar({
           </div>
         );
         })}
+        {hasMoreConversations && (
+          <button className="load-more-btn" onClick={onLoadMore}>
+            Load more chats
+          </button>
+        )}
       </div>
 
     </aside>

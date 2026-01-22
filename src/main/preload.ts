@@ -99,6 +99,8 @@ const electronAPI = {
 
   conversations: {
     getAll: (): Promise<Conversation[]> => ipcRenderer.invoke('conversations:get-all'),
+    getPaginated: (limit: number, offset: number): Promise<{ conversations: Conversation[]; total: number }> =>
+      ipcRenderer.invoke('conversations:get-paginated', limit, offset),
     get: (id: string): Promise<Conversation | undefined> =>
       ipcRenderer.invoke('conversations:get', id),
     create: (): Promise<Conversation> => ipcRenderer.invoke('conversations:create'),

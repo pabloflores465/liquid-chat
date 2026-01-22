@@ -72,6 +72,7 @@ export interface ElectronAPI {
   };
   conversations: {
     getAll: () => Promise<Conversation[]>;
+    getPaginated: (limit: number, offset: number) => Promise<{ conversations: Conversation[]; total: number }>;
     get: (id: string) => Promise<Conversation | undefined>;
     create: () => Promise<Conversation>;
     save: (conversation: Conversation) => Promise<{ success: boolean }>;

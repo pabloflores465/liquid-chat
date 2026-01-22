@@ -7,6 +7,8 @@ interface QueueItem {
   conversationId: string;
 }
 
+const CONVERSATIONS_PAGE_SIZE = 50;
+
 interface UseChatReturn {
   conversations: Conversation[];
   currentConversation: Conversation | null;
@@ -14,12 +16,14 @@ interface UseChatReturn {
   generatingConversationId: string | null;
   queueLength: number;
   llmStatus: string;
+  hasMoreConversations: boolean;
   sendMessage: (content: string) => Promise<void>;
   stopGeneration: () => void;
   createConversation: () => Promise<void>;
   selectConversation: (id: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
   renameConversation: (id: string, newTitle: string) => Promise<void>;
+  loadMoreConversations: () => Promise<void>;
 }
 
 export function useChat(): UseChatReturn {
@@ -28,6 +32,8 @@ export function useChat(): UseChatReturn {
   const [isGenerating, setIsGenerating] = useState(false);
   const [llmStatus, setLlmStatus] = useState('Initializing...');
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [hasMoreConversations, setHasMoreConversations] = useState(false);
+  const [totalConversations, setTotalConversations] = useState(0);
 
   const streamingContentRef = useRef('');
   const streamingThinkingRef = useRef('');
@@ -47,8 +53,13 @@ export function useChat(): UseChatReturn {
   // Load conversations on mount
   useEffect(() => {
     const loadConversations = async (): Promise<void> => {
-      const convs = await window.electron.conversations.getAll();
+      const { conversations: convs, total } = await window.electron.conversations.getPaginated(
+        CONVERSATIONS_PAGE_SIZE,
+        0
+      );
       setConversations(convs);
+      setTotalConversations(total);
+      setHasMoreConversations(convs.length < total);
 
       const currentId = await window.electron.conversations.getCurrentId();
       if (currentId) {
@@ -436,6 +447,19 @@ export function useChat(): UseChatReturn {
     await window.electron.conversations.save(updatedConversation);
   }, [conversations]);
 
+  const loadMoreConversations = useCallback(async (): Promise<void> => {
+    if (!hasMoreConversations) return;
+
+    const { conversations: moreConvs, total } = await window.electron.conversations.getPaginated(
+      CONVERSATIONS_PAGE_SIZE,
+      conversations.length
+    );
+
+    setConversations((prev) => [...prev, ...moreConvs]);
+    setTotalConversations(total);
+    setHasMoreConversations(conversations.length + moreConvs.length < total);
+  }, [conversations.length, hasMoreConversations]);
+
   return {
     conversations,
     currentConversation,
@@ -443,11 +467,13 @@ export function useChat(): UseChatReturn {
     generatingConversationId,
     queueLength: queue.length,
     llmStatus,
+    hasMoreConversations,
     sendMessage,
     stopGeneration,
     createConversation,
     selectConversation,
     deleteConversation,
     renameConversation,
+    loadMoreConversations,
   };
 }

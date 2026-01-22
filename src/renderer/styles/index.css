@@ -180,6 +180,22 @@ input, textarea {
   padding: 8px;
 }
 
+.load-more-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.load-more-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .conversation-item {
   display: flex;
   align-items: center;

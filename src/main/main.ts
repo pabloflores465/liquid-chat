@@ -6,6 +6,7 @@ import { llmEngine } from './llm-engine.js';
 import { modelManager } from './model-manager.js';
 import {
   getConversations,
+  getConversationsPaginated,
   getConversation,
   saveConversation,
   deleteConversation,
@@ -167,6 +168,10 @@ ipcMain.handle('llm:is-generating', () => {
 // Conversation management
 ipcMain.handle('conversations:get-all', () => {
   return getConversations();
+});
+
+ipcMain.handle('conversations:get-paginated', (_event, limit: number, offset: number) => {
+  return getConversationsPaginated(limit, offset);
 });
 
 ipcMain.handle('conversations:get', (_event, id: string) => {

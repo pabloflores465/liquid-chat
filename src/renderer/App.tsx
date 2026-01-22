@@ -19,12 +19,14 @@ export default function App(): React.ReactElement {
     generatingConversationId,
     queueLength,
     llmStatus,
+    hasMoreConversations,
     sendMessage,
     stopGeneration,
     createConversation,
     selectConversation,
     deleteConversation,
     renameConversation,
+    loadMoreConversations,
   } = useChat();
 
   const { theme, isDark, cycleTheme } = useTheme();
@@ -107,10 +109,12 @@ export default function App(): React.ReactElement {
         conversations={conversations}
         currentConversationId={currentConversation?.id ?? null}
         generatingConversationId={generatingConversationId}
+        hasMoreConversations={hasMoreConversations}
         onNewChat={createConversation}
         onSelectConversation={selectConversation}
         onDeleteConversation={deleteConversation}
         onRenameConversation={renameConversation}
+        onLoadMore={loadMoreConversations}
       />
 
       <main className="main-content">

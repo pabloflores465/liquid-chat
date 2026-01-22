@@ -25,6 +25,12 @@ export function getConversations(): Conversation[] {
   return store.get('conversations', []);
 }
 
+export function getConversationsPaginated(limit: number, offset: number): { conversations: Conversation[]; total: number } {
+  const all = store.get('conversations', []);
+  const conversations = all.slice(offset, offset + limit);
+  return { conversations, total: all.length };
+}
+
 export function getConversation(id: string): Conversation | undefined {
   const conversations = getConversations();
   return conversations.find((c) => c.id === id);
