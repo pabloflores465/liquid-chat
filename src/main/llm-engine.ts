@@ -10,7 +10,7 @@ export class LLMEngine {
   private session: LlamaChatSession | null = null;
   private mainWindow: BrowserWindow | null = null;
   private isGenerating = false;
-  private shouldStop = false;
+  private abortController: AbortController | null = null;
   private generationPromise: Promise<string> | null = null;
   private generatingForConversationId: string | null = null;
   private supportsThinking = false;
@@ -123,7 +123,7 @@ export class LLMEngine {
     }
 
     this.isGenerating = true;
-    this.shouldStop = false;
+    this.abortController = new AbortController();
 
     let fullResponse = '';
 
@@ -133,6 +133,7 @@ export class LLMEngine {
           maxTokens: 2000000,
           temperature: 0.7,
           topP: 0.9,
+          signal: this.abortController!.signal,
           repeatPenalty: {
             penalty: 1.2,
             frequencyPenalty: 0.1,
@@ -141,10 +142,6 @@ export class LLMEngine {
             lastTokens: 64,
           },
           onResponseChunk: (chunk) => {
-            if (this.shouldStop) {
-              throw new Error('Aborted');
-            }
-
             // Check if this is a thought segment
             const isThought = chunk.type === 'segment' && chunk.segmentType === 'thought';
             const chunkType = isThought ? 'thinking' : 'content';
@@ -157,13 +154,13 @@ export class LLMEngine {
 
         return fullResponse;
       } catch (error: unknown) {
-        if (error instanceof Error && error.message === 'Aborted') {
+        if (error instanceof Error && error.name === 'AbortError') {
           return fullResponse;
         }
         throw error;
       } finally {
         this.isGenerating = false;
-        this.shouldStop = false;
+        this.abortController = null;
         this.generationPromise = null;
         this.generatingForConversationId = null;
       }
@@ -174,7 +171,9 @@ export class LLMEngine {
   }
 
   stopGeneration(): void {
-    this.shouldStop = true;
+    if (this.abortController) {
+      this.abortController.abort();
+    }
   }
 
   isReady(): boolean {
