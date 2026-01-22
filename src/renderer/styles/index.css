@@ -174,6 +174,109 @@ input, textarea {
   background: var(--accent-hover);
 }
 
+.sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.sidebar-search:focus-within {
+  border-color: var(--border-focus);
+  background: var(--bg-input);
+}
+
+.sidebar-search svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  min-width: 0;
+}
+
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.sidebar-search.active {
+  border-color: var(--border-focus);
+  background: var(--bg-input);
+}
+
+.search-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.search-spinner svg {
+  color: var(--accent-primary);
+  animation: spin 1s linear infinite;
+}
+
+.search-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.search-clear-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.search-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.search-no-results {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.conversation-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.conversation-match-preview {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 .conversations-list {
   flex: 1;
   overflow-y: auto;
