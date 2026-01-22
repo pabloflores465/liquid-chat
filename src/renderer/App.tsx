@@ -107,20 +107,59 @@ export default function App(): React.ReactElement {
         conversations={conversations}
         currentConversationId={currentConversation?.id ?? null}
         generatingConversationId={generatingConversationId}
-        theme={theme}
         onNewChat={createConversation}
         onSelectConversation={selectConversation}
         onDeleteConversation={deleteConversation}
         onRenameConversation={renameConversation}
-        onCycleTheme={cycleTheme}
       />
 
       <main className="main-content">
         <header className="chat-header">
           <h2>{currentConversation?.title ?? 'New Chat'}</h2>
-          <div className="status-indicator">
-            <span className={`status-dot ${getStatusDotClass()}`} />
-            {getStatusText()}
+          <div className="header-right">
+            <div className="status-indicator">
+              <span className={`status-dot ${getStatusDotClass()}`} />
+              {getStatusText()}
+            </div>
+            <div className="theme-toggle">
+              <button
+                className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
+                onClick={() => theme !== 'light' && cycleTheme()}
+                title="Light"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="4"/>
+                  <path d="M12 2v2"/>
+                  <path d="M12 20v2"/>
+                  <path d="m4.93 4.93 1.41 1.41"/>
+                  <path d="m17.66 17.66 1.41 1.41"/>
+                  <path d="M2 12h2"/>
+                  <path d="M20 12h2"/>
+                  <path d="m6.34 17.66-1.41 1.41"/>
+                  <path d="m19.07 4.93-1.41 1.41"/>
+                </svg>
+              </button>
+              <button
+                className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
+                onClick={() => theme !== 'dark' && cycleTheme()}
+                title="Dark"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                </svg>
+              </button>
+              <button
+                className={`theme-btn ${theme === 'system' ? 'active' : ''}`}
+                onClick={() => theme !== 'system' && cycleTheme()}
+                title="System"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M12 3v18"/>
+                  <path d="M12 3a9 9 0 0 1 0 18"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </header>
 

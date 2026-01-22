@@ -5,12 +5,10 @@ interface SidebarProps {
   conversations: Conversation[];
   currentConversationId: string | null;
   generatingConversationId: string | null;
-  theme: 'light' | 'dark' | 'system';
   onNewChat: () => void;
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
-  onCycleTheme: () => void;
 }
 
 function Spinner(): React.ReactElement {
@@ -23,28 +21,14 @@ function Spinner(): React.ReactElement {
   );
 }
 
-const themeLabels = {
-  light: 'Light',
-  dark: 'Dark',
-  system: 'System',
-};
-
-const themeIcons = {
-  light: '(sun)',
-  dark: '(moon)',
-  system: '(auto)',
-};
-
 export function Sidebar({
   conversations,
   currentConversationId,
   generatingConversationId,
-  theme,
   onNewChat,
   onSelectConversation,
   onDeleteConversation,
   onRenameConversation,
-  onCycleTheme,
 }: SidebarProps): React.ReactElement {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -153,11 +137,6 @@ export function Sidebar({
         })}
       </div>
 
-      <div className="sidebar-footer">
-        <button className="theme-toggle" onClick={onCycleTheme}>
-          {themeIcons[theme]} {themeLabels[theme]} Theme
-        </button>
-      </div>
     </aside>
   );
 }
