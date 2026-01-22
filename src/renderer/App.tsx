@@ -10,7 +10,7 @@ type AppState = 'checking' | 'download' | 'loading' | 'ready';
 
 export default function App(): React.ReactElement {
   const [appState, setAppState] = useState<AppState>('checking');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const {
     conversations,
@@ -51,7 +51,10 @@ export default function App(): React.ReactElement {
 
   // Auto-scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [currentConversation?.messages]);
 
   const handleDownloadComplete = useCallback(async (): Promise<void> => {
@@ -121,7 +124,7 @@ export default function App(): React.ReactElement {
           </div>
         </header>
 
-        <div className="messages-container">
+        <div className="messages-container" ref={messagesContainerRef}>
           {currentConversation?.messages.map((message, index) => {
             let queuePosition: number | undefined;
             if (message.status === 'queued') {
@@ -155,8 +158,6 @@ export default function App(): React.ReactElement {
               </p>
             </div>
           )}
-
-          <div ref={messagesEndRef} />
         </div>
 
         <ChatInput
