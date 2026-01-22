@@ -7,14 +7,6 @@ import { ModelInfo, DownloadProgress, ModelDefinition, ModelId } from './types.j
 
 const AVAILABLE_MODELS: ModelDefinition[] = [
   {
-    id: 'qwen3-4b',
-    name: 'Qwen3 4B',
-    filename: 'Qwen3-4B-Q4_K_M.gguf',
-    url: 'https://huggingface.co/unsloth/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf',
-    supportsThinking: false,
-    description: 'Fast general-purpose model',
-  },
-  {
     id: 'qwen3-4b-thinking',
     name: 'Qwen3 4B Thinking',
     filename: 'Qwen3-4B-Thinking-2507-Q4_K_M.gguf',

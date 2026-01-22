@@ -17,7 +17,7 @@ export interface Conversation {
   updatedAt: number;
 }
 
-export type ModelId = 'qwen3-4b' | 'qwen3-4b-thinking';
+export type ModelId = 'qwen3-4b-thinking';
 
 export interface ModelInfo {
   id: ModelId;

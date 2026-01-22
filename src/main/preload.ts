@@ -15,7 +15,7 @@ interface Conversation {
   updatedAt: number;
 }
 
-type ModelId = 'qwen3-4b' | 'qwen3-4b-thinking';
+type ModelId = 'qwen3-4b-thinking';
 
 interface AppSettings {
   theme: 'light' | 'dark' | 'system';
