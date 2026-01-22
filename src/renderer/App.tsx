@@ -29,7 +29,7 @@ export default function App(): React.ReactElement {
     loadMoreConversations,
   } = useChat();
 
-  const { theme, isDark, cycleTheme } = useTheme();
+  const { theme, isDark, setTheme } = useTheme();
 
   // Check model status on mount
   useEffect(() => {
@@ -128,7 +128,7 @@ export default function App(): React.ReactElement {
             <div className="theme-toggle">
               <button
                 className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
-                onClick={() => theme !== 'light' && cycleTheme()}
+                onClick={() => setTheme('light')}
                 title="Light"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -145,7 +145,7 @@ export default function App(): React.ReactElement {
               </button>
               <button
                 className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
-                onClick={() => theme !== 'dark' && cycleTheme()}
+                onClick={() => setTheme('dark')}
                 title="Dark"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -154,7 +154,7 @@ export default function App(): React.ReactElement {
               </button>
               <button
                 className={`theme-btn ${theme === 'system' ? 'active' : ''}`}
-                onClick={() => theme !== 'system' && cycleTheme()}
+                onClick={() => setTheme('system')}
                 title="System"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

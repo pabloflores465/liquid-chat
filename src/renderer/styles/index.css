@@ -402,21 +402,27 @@ input, textarea {
 .theme-toggle {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   background: var(--bg-tertiary);
   border-radius: var(--radius-sm);
-  padding: 4px;
+  padding: 3px;
 }
 
 .theme-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-xs);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
   color: var(--text-tertiary);
   transition: all var(--transition-fast);
+  position: relative;
+  z-index: 1;
+}
+
+.theme-btn svg {
+  pointer-events: none;
 }
 
 .theme-btn:hover {
