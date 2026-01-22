@@ -32,7 +32,8 @@ export default function App(): React.ReactElement {
   // Check model status on mount
   useEffect(() => {
     const checkModel = async (): Promise<void> => {
-      const info = await window.electron.model.getInfo();
+      const settings = await window.electron.settings.get();
+      const info = await window.electron.model.getInfo(settings.selectedModel);
 
       if (info.downloaded) {
         setAppState('loading');

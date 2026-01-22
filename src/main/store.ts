@@ -10,6 +10,7 @@ interface StoreData {
 const defaultSettings: AppSettings = {
   theme: 'system',
   modelPath: null,
+  selectedModel: 'qwen3-4b-thinking',
 };
 
 export const store = new Store<StoreData>({
@@ -54,7 +55,12 @@ export function deleteConversation(id: string): void {
 }
 
 export function getSettings(): AppSettings {
-  return store.get('settings', defaultSettings);
+  const settings = store.get('settings', defaultSettings);
+  // Ensure selectedModel has a default value for existing installations
+  if (!settings.selectedModel) {
+    settings.selectedModel = 'qwen3-4b-thinking';
+  }
+  return settings;
 }
 
 export function updateSettings(settings: Partial<AppSettings>): AppSettings {

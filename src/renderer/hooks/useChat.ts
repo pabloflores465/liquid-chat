@@ -30,12 +30,14 @@ export function useChat(): UseChatReturn {
   const [queue, setQueue] = useState<QueueItem[]>([]);
 
   const streamingContentRef = useRef('');
+  const streamingThinkingRef = useRef('');
   const isProcessingRef = useRef(false);
   const currentConversationRef = useRef<Conversation | null>(null);
   const [backgroundGeneratingConvId, setBackgroundGeneratingConvId] = useState<string | null>(null);
   const [pendingSessionReset, setPendingSessionReset] = useState<string | null>(null);
   const [generatingConversationId, setGeneratingConversationId] = useState<string | null>(null);
   const streamingContentByConvRef = useRef<Map<string, string>>(new Map());
+  const streamingThinkingByConvRef = useRef<Map<string, string>>(new Map());
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -72,21 +74,34 @@ export function useChat(): UseChatReturn {
   // Listen for streaming chunks
   useEffect(() => {
     const unsubscribe = window.electron.llm.onChunk((data) => {
-      const { chunk, conversationId } = data;
+      const { chunk, conversationId, type } = data;
 
       // Determine which conversation this chunk belongs to
       const targetConvId = conversationId || currentConversationRef.current?.id;
       if (!targetConvId) return;
 
-      // Update streaming content for this conversation
-      const currentContent = streamingContentByConvRef.current.get(targetConvId) || '';
-      const newContent = currentContent + chunk;
-      streamingContentByConvRef.current.set(targetConvId, newContent);
+      // Update streaming content based on type
+      if (type === 'thinking') {
+        const currentThinking = streamingThinkingByConvRef.current.get(targetConvId) || '';
+        const newThinking = currentThinking + chunk;
+        streamingThinkingByConvRef.current.set(targetConvId, newThinking);
 
-      // Also update the legacy ref for compatibility
-      if (targetConvId === currentConversationRef.current?.id) {
-        streamingContentRef.current = newContent;
+        if (targetConvId === currentConversationRef.current?.id) {
+          streamingThinkingRef.current = newThinking;
+        }
+      } else {
+        const currentContent = streamingContentByConvRef.current.get(targetConvId) || '';
+        const newContent = currentContent + chunk;
+        streamingContentByConvRef.current.set(targetConvId, newContent);
+
+        if (targetConvId === currentConversationRef.current?.id) {
+          streamingContentRef.current = newContent;
+        }
       }
+
+      // Get the current values for updating the message
+      const newContent = streamingContentByConvRef.current.get(targetConvId) || '';
+      const newThinking = streamingThinkingByConvRef.current.get(targetConvId) || '';
 
       // Update the appropriate conversation
       const updateConversationMessages = (conv: Conversation): Conversation => {
@@ -99,6 +114,7 @@ export function useChat(): UseChatReturn {
           messages[messages.length - 1] = {
             ...lastMessage,
             content: newContent,
+            thinking: newThinking || undefined,
           };
         }
 
@@ -126,7 +142,8 @@ export function useChat(): UseChatReturn {
     conversationId: string,
     messageId: string,
     status: MessageStatus,
-    content?: string
+    content?: string,
+    thinking?: string
   ) => {
     const updateConv = (conv: Conversation): Conversation => {
       if (conv.id !== conversationId) return conv;
@@ -134,7 +151,12 @@ export function useChat(): UseChatReturn {
         ...conv,
         messages: conv.messages.map((m) =>
           m.id === messageId
-            ? { ...m, status, ...(content !== undefined ? { content } : {}) }
+            ? {
+                ...m,
+                status,
+                ...(content !== undefined ? { content } : {}),
+                ...(thinking !== undefined ? { thinking } : {}),
+              }
             : m
         ),
         updatedAt: Date.now(),
@@ -189,20 +211,24 @@ export function useChat(): UseChatReturn {
 
     // Initialize streaming content for this conversation
     streamingContentByConvRef.current.set(item.conversationId, '');
+    streamingThinkingByConvRef.current.set(item.conversationId, '');
     streamingContentRef.current = '';
+    streamingThinkingRef.current = '';
 
     try {
       const result = await window.electron.llm.generate(item.content);
 
       // Get the final streaming content for this conversation
       const finalContent = streamingContentByConvRef.current.get(item.conversationId) || '';
+      const finalThinking = streamingThinkingByConvRef.current.get(item.conversationId) || '';
 
       const finalStatus: MessageStatus = result.success || result.aborted ? 'complete' : 'error';
       updateMessageStatus(
         item.conversationId,
         assistantMsg.id,
         finalStatus,
-        finalContent
+        finalContent,
+        finalThinking || undefined
       );
 
       // Get the updated conversation from state and save it
@@ -219,9 +245,11 @@ export function useChat(): UseChatReturn {
 
       // Clean up streaming content for this conversation
       streamingContentByConvRef.current.delete(item.conversationId);
+      streamingThinkingByConvRef.current.delete(item.conversationId);
     } catch (error) {
       updateMessageStatus(item.conversationId, assistantMsg.id, 'error', 'Error generating response');
       streamingContentByConvRef.current.delete(item.conversationId);
+      streamingThinkingByConvRef.current.delete(item.conversationId);
     } finally {
       setIsGenerating(false);
       setGeneratingConversationId(null);

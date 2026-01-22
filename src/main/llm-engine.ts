@@ -13,16 +13,18 @@ export class LLMEngine {
   private shouldStop = false;
   private generationPromise: Promise<string> | null = null;
   private generatingForConversationId: string | null = null;
+  private supportsThinking = false;
 
   setMainWindow(window: BrowserWindow): void {
     this.mainWindow = window;
   }
 
-  async initialize(modelPath: string): Promise<void> {
+  async initialize(modelPath: string, supportsThinking = false): Promise<void> {
     if (this.model) {
       return;
     }
 
+    this.supportsThinking = supportsThinking;
     this.sendStatus('Initializing LLM engine...');
 
     this.llama = await getLlama();
@@ -110,7 +112,7 @@ export class LLMEngine {
 
   async generate(
     prompt: string,
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string, type: 'thinking' | 'content') => void
   ): Promise<string> {
     if (!this.context || !this.session) {
       throw new Error('LLM not initialized');
@@ -128,7 +130,7 @@ export class LLMEngine {
     const doGenerate = async (): Promise<string> => {
       try {
         fullResponse = await this.session!.prompt(prompt, {
-          maxTokens: 2048,
+          maxTokens: 2000000,
           temperature: 0.7,
           topP: 0.9,
           repeatPenalty: {
@@ -138,12 +140,18 @@ export class LLMEngine {
             penalizeNewLine: false,
             lastTokens: 64,
           },
-          onTextChunk: (chunk) => {
+          onResponseChunk: (chunk) => {
             if (this.shouldStop) {
               throw new Error('Aborted');
             }
-            fullResponse += chunk;
-            onChunk(chunk);
+
+            // Check if this is a thought segment
+            const isThought = chunk.type === 'segment' && chunk.segmentType === 'thought';
+            const chunkType = isThought ? 'thinking' : 'content';
+
+            if (chunk.text) {
+              onChunk(chunk.text, chunkType);
+            }
           },
         });
 

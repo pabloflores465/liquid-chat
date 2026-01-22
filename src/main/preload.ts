@@ -15,16 +15,22 @@ interface Conversation {
   updatedAt: number;
 }
 
+type ModelId = 'qwen3-4b' | 'qwen3-4b-thinking';
+
 interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   modelPath: string | null;
+  selectedModel: ModelId;
 }
 
 interface ModelInfo {
+  id: ModelId;
   name: string;
   path: string;
   size: number;
   downloaded: boolean;
+  supportsThinking: boolean;
+  description: string;
 }
 
 interface DownloadProgress {
@@ -36,15 +42,17 @@ interface DownloadProgress {
 interface ChunkData {
   chunk: string;
   conversationId: string | null;
+  type: 'thinking' | 'content';
 }
 
 type Callback<T> = (data: T) => void;
 
 const electronAPI = {
   model: {
-    getInfo: (): Promise<ModelInfo> => ipcRenderer.invoke('model:get-info'),
-    download: (): Promise<{ success: boolean; path?: string; error?: string }> =>
-      ipcRenderer.invoke('model:download'),
+    getAll: (): Promise<ModelInfo[]> => ipcRenderer.invoke('model:get-all'),
+    getInfo: (modelId: ModelId): Promise<ModelInfo> => ipcRenderer.invoke('model:get-info', modelId),
+    download: (modelId: ModelId): Promise<{ success: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke('model:download', modelId),
     cancelDownload: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('model:cancel-download'),
     onDownloadProgress: (callback: Callback<DownloadProgress>): (() => void) => {

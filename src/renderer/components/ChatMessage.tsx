@@ -1,6 +1,7 @@
 import React from 'react';
 import { Message } from '../types/electron';
 import { MessageContent } from './MessageContent';
+import { ThinkingSection } from './ThinkingSection';
 
 interface ChatMessageProps {
   message: Message;
@@ -38,7 +39,7 @@ function QueueIndicator({ position }: { position: number }): React.ReactElement 
   );
 }
 
-export function ChatMessage({ message, isDark, isStreaming, queuePosition }: ChatMessageProps): React.ReactElement {
+export function ChatMessage({ message, isDark, isStreaming: _isStreaming, queuePosition }: ChatMessageProps): React.ReactElement {
   const isUser = message.role === 'user';
   const status = message.status || 'complete';
 
@@ -50,10 +51,22 @@ export function ChatMessage({ message, isDark, isStreaming, queuePosition }: Cha
 
     // Show generating state with loading animation or content
     if (status === 'generating') {
-      if (message.content) {
+      const hasThinking = Boolean(message.thinking);
+      const hasContent = Boolean(message.content);
+
+      if (hasThinking || hasContent) {
         return (
           <>
-            <MessageContent content={message.content} isDark={isDark} />
+            {hasThinking && (
+              <ThinkingSection
+                thinking={message.thinking!}
+                isDark={isDark}
+                isStreaming={!hasContent}
+              />
+            )}
+            {hasContent && (
+              <MessageContent content={message.content} isDark={isDark} />
+            )}
             <div className="generating-indicator">
               <LoadingDots />
             </div>
@@ -82,23 +95,21 @@ export function ChatMessage({ message, isDark, isStreaming, queuePosition }: Cha
       );
     }
 
-    // Show complete content
-    if (message.content) {
-      return <MessageContent content={message.content} isDark={isDark} />;
-    }
-
-    // Fallback for streaming without status (backwards compatibility)
-    if (isStreaming) {
-      return (
-        <div className="typing-indicator">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-      );
-    }
-
-    return null;
+    // Show complete content with thinking section if available
+    return (
+      <>
+        {message.thinking && (
+          <ThinkingSection
+            thinking={message.thinking}
+            isDark={isDark}
+            isStreaming={false}
+          />
+        )}
+        {message.content && (
+          <MessageContent content={message.content} isDark={isDark} />
+        )}
+      </>
+    );
   };
 
   return (

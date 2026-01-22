@@ -4,6 +4,7 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  thinking?: string;
   timestamp: number;
   status?: MessageStatus;
 }
@@ -16,11 +17,16 @@ export interface Conversation {
   updatedAt: number;
 }
 
+export type ModelId = 'qwen3-4b' | 'qwen3-4b-thinking';
+
 export interface ModelInfo {
+  id: ModelId;
   name: string;
   path: string;
   size: number;
   downloaded: boolean;
+  supportsThinking: boolean;
+  description: string;
 }
 
 export interface DownloadProgress {
@@ -32,19 +38,22 @@ export interface DownloadProgress {
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   modelPath: string | null;
+  selectedModel: ModelId;
 }
 
 export interface ChunkData {
   chunk: string;
   conversationId: string | null;
+  type: 'thinking' | 'content';
 }
 
 type Callback<T> = (data: T) => void;
 
 export interface ElectronAPI {
   model: {
-    getInfo: () => Promise<ModelInfo>;
-    download: () => Promise<{ success: boolean; path?: string; error?: string }>;
+    getAll: () => Promise<ModelInfo[]>;
+    getInfo: (modelId: ModelId) => Promise<ModelInfo>;
+    download: (modelId: ModelId) => Promise<{ success: boolean; path?: string; error?: string }>;
     cancelDownload: () => Promise<{ success: boolean }>;
     onDownloadProgress: (callback: Callback<DownloadProgress>) => () => void;
   };

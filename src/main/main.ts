@@ -14,7 +14,7 @@ import {
   getCurrentConversationId,
   setCurrentConversationId,
 } from './store.js';
-import { Conversation, Message } from './types.js';
+import { Conversation, Message, ModelId } from './types.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -60,16 +60,25 @@ function createWindow(): void {
 // IPC Handlers
 
 // Model operations
-ipcMain.handle('model:get-info', () => {
-  return modelManager.getModelInfo();
+ipcMain.handle('model:get-all', () => {
+  return modelManager.getAllModels();
 });
 
-ipcMain.handle('model:download', async () => {
+ipcMain.handle('model:get-info', (_event, modelId: ModelId) => {
+  const info = modelManager.getModelInfo(modelId);
+  console.log('[GET-INFO] Model:', modelId, 'Downloaded:', info.downloaded, 'Path:', info.path);
+  return info;
+});
+
+ipcMain.handle('model:download', async (_event, modelId: ModelId) => {
+  console.log('[DOWNLOAD] Starting download for:', modelId);
   try {
-    const path = await modelManager.downloadModel();
+    const path = await modelManager.downloadModel(modelId);
+    console.log('[DOWNLOAD] Success, path:', path);
     return { success: true, path };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    console.log('[DOWNLOAD] Error:', message);
     return { success: false, error: message };
   }
 });
@@ -82,8 +91,14 @@ ipcMain.handle('model:cancel-download', () => {
 // LLM operations
 ipcMain.handle('llm:initialize', async () => {
   try {
-    const modelPath = modelManager.getModelPath();
-    await llmEngine.initialize(modelPath);
+    const settings = getSettings();
+    console.log('[INIT] Selected model:', settings.selectedModel);
+    const modelPath = modelManager.getModelPath(settings.selectedModel);
+    console.log('[INIT] Model path:', modelPath);
+    const modelInfo = modelManager.getModelInfo(settings.selectedModel);
+    console.log('[INIT] Model info:', modelInfo);
+    console.log('[INIT] Supports thinking:', modelInfo.supportsThinking);
+    await llmEngine.initialize(modelPath, modelInfo.supportsThinking);
     return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -112,11 +127,12 @@ ipcMain.handle('llm:load-history', async (_event, messages: Message[]) => {
 
 ipcMain.handle('llm:generate', async (_event, prompt: string) => {
   try {
-    const response = await llmEngine.generate(prompt, (chunk) => {
+    const response = await llmEngine.generate(prompt, (chunk, type) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('llm:chunk', {
           chunk,
           conversationId: llmEngine.getGeneratingConversationId(),
+          type,
         });
       }
     });
