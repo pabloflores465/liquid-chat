@@ -44,6 +44,21 @@ export function MessageContent({ content, isDark }: MessageContentProps): React.
       const { children } = props;
       return <>{children}</>;
     },
+    // Open links in external browser
+    a(props) {
+      const { href, children, ...rest } = props;
+      const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
+        e.preventDefault();
+        if (href) {
+          window.electron.shell.openExternal(href);
+        }
+      };
+      return (
+        <a href={href} onClick={handleClick} {...rest}>
+          {children}
+        </a>
+      );
+    },
   };
 
   return (

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
 
 interface Message {
   id: string;
@@ -127,6 +127,10 @@ const electronAPI = {
       ipcRenderer.on('theme:changed', handler);
       return () => ipcRenderer.removeListener('theme:changed', handler);
     },
+  },
+
+  shell: {
+    openExternal: (url: string): Promise<void> => shell.openExternal(url),
   },
 };
 

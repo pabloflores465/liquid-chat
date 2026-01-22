@@ -87,6 +87,9 @@ export interface ElectronAPI {
     getSystem: () => Promise<boolean>;
     onChanged: (callback: Callback<boolean>) => () => void;
   };
+  shell: {
+    openExternal: (url: string) => Promise<void>;
+  };
 }
 
 declare global {
